@@ -60,6 +60,34 @@ td, th { border:1px solid #ccc; padding:6px;}
   visibility: visible;
 }
 
+
+.tooltip-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 5px;
+}
+
+.tooltip-table td,
+.tooltip-table th {
+  border: 1px solid #ccc;
+  padding: 4px;
+  text-align: center;
+  background: white;
+  color: black;
+}
+
+.tooltip-table th {
+  background: #ecf0f1;
+}
+
+.tip {
+  display: block;
+  margin-top: 6px;
+  color: #2ecc71;
+  font-weight: bold;
+}
+
+
 .green {
   color: #2ecc71;
   font-weight: bold;
@@ -120,7 +148,7 @@ td, th { border:1px solid #ccc; padding:6px;}
         2 → sol mixte<br>
         4 → sol mou (herbe, neige)<br>
         Plus le sol est mou, plus l'atténuation est importante.<br>
-        <span class="green">Pour un résultat conservateur, laisser la valeur à g=0.</span>
+        <span class="green">Pour un résultat conservateur, laisser la valeur à g = 0.</span>
       </span>
     </span>
   </label>
@@ -132,12 +160,45 @@ td, th { border:1px solid #ccc; padding:6px;}
   </select>
   
 
-<label><br><br>Directivité (Q)</label>
-<select id="Q">
-<option value="2" selected>Sol (Q=2)</option>
-<option value="4">Mur (Q=4)</option>
-<option value="8">Coin (Q=8)</option>
-</select>
+  <label>
+    <br><br>
+    Directivité (Q)
+    <span class="help">?
+      <span class="tooltip">
+    
+        La directivité Q représente la répartition du son dans l’espace.<br><br>
+    
+        <table class="tooltip-table">
+          <tr>
+            <th>Configuration</th>
+            <th>Schéma</th>
+          </tr>
+          <tr>
+            <td>Sol (Q=2)</td>
+            <td><img src="Q2.png" width="60"></td>
+          </tr>
+          <tr>
+            <td>Mur (Q=4)</td>
+            <td><img src="Q4.png" width="60"></td>
+          </tr>
+          <tr>
+            <td>Coin (Q=8)</td>
+            <td><img src="Q8.png" width="60"></td>
+          </tr>
+        </table>
+    
+        <span class="tip">Plus Q est élevé, plus le son est dirigé.</span>
+    
+      </span>
+    </span>
+    </label>
+    
+    <select id="Q">
+    <option value="2" selected>Sol (Q=2)</option>
+    <option value="4">Mur (Q=4)</option>
+    <option value="8">Coin (Q=8)</option>
+    </select>
+    
 
 <button onclick="calculate()">Calculer</button>
 
