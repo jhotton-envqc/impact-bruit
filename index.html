@@ -10,7 +10,6 @@
 body { font-family: Arial; margin:30px; background:#f5f7fa;}
 .container { max-width:950px; background:white; padding:20px; border-radius:10px;}
 
-label { font-weight:bold; margin-top:12px; display:block;}
 input, select { width:100%; padding:6px; margin-top:5px;}
 
 button {
@@ -21,24 +20,51 @@ button {
   color:white;
   border:none;
 }
-button:hover { background:#2980b9; }
 
-.octave-row {
-  display:flex;
-  gap:6px;
-  overflow-x:auto;
-  margin-top:10px;
-}
-.octave-row div {
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-}
-.octave-row span { font-size:11px; }
-.oct { width:55px; text-align:center; }
+.octave-row { display:flex; gap:6px; overflow-x:auto;}
+.octave-row div { display:flex; flex-direction:column; align-items:center;}
+.oct { width:55px; text-align:center;}
 
-#result { margin-top:20px; font-size:18px; line-height:1.5; }
-.error { color:red; margin-top:10px; }
+table { border-collapse: collapse; margin-top:10px;}
+td, th { border:1px solid #ccc; padding:6px;}
+
+.error { color:red; margin-top:10px;}
+
+.help {
+  position: relative;
+  display: inline-block;
+  margin-left: 5px;
+  color: #3498db;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.tooltip {
+  visibility: hidden;
+  width: 260px;
+  background: #333;
+  color: #fff;
+  text-align: left;
+  padding: 8px;
+  border-radius: 6px;
+
+  position: absolute;
+  bottom: 125%;
+  left: 0;
+  z-index: 1;
+
+  font-size: 12px;
+}
+
+.help:hover .tooltip {
+  visibility: visible;
+}
+
+.green {
+  color: #2ecc71;
+  font-weight: bold;
+}
+
 </style>
 </head>
 
@@ -47,12 +73,6 @@ button:hover { background:#2980b9; }
 <div class="container">
 
 <h2>Impact sonore – ISO 9613 simplifié</h2>
-
-<label>Objectif</label>
-<select id="goal">
-<option value="level">Niveau à une distance</option>
-<option value="distance">Distance pour respecter un seuil</option>
-</select>
 
 <label>Type d'entrée</label>
 <select id="inputType">
@@ -63,12 +83,12 @@ button:hover { background:#2980b9; }
 </select>
 
 <div id="singleInput">
-<label>Valeur (dB)</label>
-<input id="value" type="number">
+<label><br>Valeur (dB)</label>
+<input id="value">
 </div>
 
 <div id="octaveBlock" style="display:none;">
-<label>Bandes d’octave</label>
+<label><br>Bandes d’octave</label>
 <div class="octave-row">
 <div><span>31.5 Hz</span><input class="oct"></div>
 <div><span>63 Hz</span><input class="oct"></div>
@@ -83,184 +103,209 @@ button:hover { background:#2980b9; }
 </div>
 
 <div id="measurementBlock" style="display:none;">
-<label>Distance de mesure (m)</label>
-<input id="measurementDistance" type="number" value="10">
+<label><br>Distance de mesure (m)</label>
+<input id="measurementDistance" value="10">
 </div>
 
-<label>Distance d’évaluation (m)</label>
-<input id="distance" type="number" value="100">
+<label><br>Distance d’évaluation (m)</label>
+<input id="distance" value="100">
 
-<label>Niveau cible (dB(A))</label>
-<input id="target" type="number" value="55">
+<label>
+    <br>Type de sol (g)
+    <span class="help">
+      ?
+      <span class="tooltip">
+        g = facteur de sol simplifié (ISO 9613) :<br>
+        0 → sol dur (béton, eau)<br>
+        2 → sol mixte<br>
+        4 → sol mou (herbe, neige)<br>
+        Plus le sol est mou, plus l'atténuation est importante.<br>
+        <span class="green">Pour un résultat conservateur, laisser la valeur à g=0.</span>
+      </span>
+    </span>
+  </label>
+  
+  <select id="ground">
+  <option value="0">Dur (g=0)</option>
+  <option value="2">Mixte (g=2)</option>
+  <option value="4">Mou (g=4)</option>
+  </select>
+  
 
-<label>Type de sol</label>
-<select id="ground">
-<option value="0">Dur</option>
-<option value="2">Mixte</option>
-<option value="4">Mou</option>
-</select>
-
-<label>Directivité</label>
+<label><br><br>Directivité (Q)</label>
 <select id="Q">
 <option value="2" selected>Sol (Q=2)</option>
-<option value="1">Libre</option>
-<option value="4">Mur</option>
-<option value="8">Coin</option>
+<option value="4">Mur (Q=4)</option>
+<option value="8">Coin (Q=8)</option>
 </select>
 
 <button onclick="calculate()">Calculer</button>
 
 <div id="error" class="error"></div>
 <div id="result"></div>
+
 <canvas id="chart"></canvas>
 
 </div>
 
 <script>
 
-// ===== CONSTANTES =====
+// constantes
 const A_weights = [-39.4,-26.2,-16.1,-8.6,-3.2,0,1.2,1,-1.1];
 const alpha = [0.05,0.1,0.2,0.5,1,2,5,10,20];
 
-// ===== OUTILS =====
-function isValidNumber(v){ return v!=="" && !isNaN(v); }
-
-// ===== FONCTIONS =====
 function sumLevels(levels){
-  let s=0;
-  levels.forEach(l=> s+=Math.pow(10,l/10));
-  return 10*Math.log10(s);
+ let s=0;
+ levels.forEach(l=>{
+  if(!isNaN(l)) s+=Math.pow(10,l/10);
+ });
+ return 10*Math.log10(s);
 }
 
-function Adiv(r){ return 20*Math.log10(r)+11; }
-function Aatm(a,r){ return a*r/1000; }
-function directivity(Q){ return 10*Math.log10(Q); }
+function Adiv(r){ return 20*Math.log10(r)+11;}
+function Aatm(a,r){ return a*r/1000;}
+function directivity(Q){ return 10*Math.log10(Q);}
+function lpToLw(Lp,r){ return Lp + 20*Math.log10(r)+11;}
 
-function lpToLw(Lp,r){ return Lp + 20*Math.log10(r)+11; }
-
-// ISO
-function calcISO(Lw_oct,r,Q,ground){
-  let LA = Lw_oct.map((Lw,i)=>{
-    let Lp = Lw + directivity(Q) - Adiv(r) - Aatm(alpha[i],r) - ground;
-    return Lp + A_weights[i];
-  });
-  return sumLevels(LA);
+function calcISO(Lw_oct,r,Q,g){
+ let LA=Lw_oct.map((Lw,i)=>{
+  if(isNaN(Lw)) return NaN;
+  let Lp=Lw + directivity(Q)-Adiv(r)-Aatm(alpha[i],r)-g;
+  return Lp + A_weights[i];
+ });
+ return sumLevels(LA);
 }
 
-function findDistance(Lw_oct,target,Q,ground){
-  let r=1;
-  while(r<5000){
-    if(calcISO(Lw_oct,r,Q,ground)<=target) return r;
-    r++;
-  }
-  return ">5000";
+function findDistance(Lw_oct,target,Q,g){
+ let r=1;
+ while(r<5000){
+  if(calcISO(Lw_oct,r,Q,g)<=target) return r;
+  r++;
+ }
+ return ">5000";
 }
 
-// ===== GRAPH =====
+// GRAPH
 let chart;
+function plotGraph(Lw_oct,Q,g,target){
 
-function plotGraph(Lw_oct,Q,target,ground){
+ let d=[],L=[];
+ for(let r=10;r<=1000;r+=10){
+  d.push(r);
+  L.push(calcISO(Lw_oct,r,Q,g));
+ }
 
-  let d=[], L=[];
-  for(let r=10;r<=1000;r+=10){
-    d.push(r);
-    L.push(calcISO(Lw_oct,r,Q,ground));
+ if(chart) chart.destroy();
+
+ chart=new Chart(document.getElementById("chart"),{
+  type:'line',
+  data:{
+   labels:d,
+   datasets:[
+    {label:"LAeq",data:L},
+    {label:"Seuil",data:d.map(()=>target),borderDash:[5,5]}
+   ]
   }
-
-  if(chart) chart.destroy();
-
-  chart = new Chart(document.getElementById("chart"),{
-    type:'line',
-    data:{
-      labels:d,
-      datasets:[
-        { label:"LAeq", data:L },
-        { label:"Seuil", data:d.map(()=>target), borderDash:[5,5] }
-      ]
-    }
-  });
+ });
 }
 
-// ===== UI =====
-document.getElementById("inputType").addEventListener("change",()=>{
-  let type = document.getElementById("inputType").value;
+// UI
+inputType.addEventListener("change",()=>{
+ let t=inputType.value;
 
-  octaveBlock.style.display = type.includes("oct")?"block":"none";
-  singleInput.style.display = type.includes("oct")?"none":"block";
-  measurementBlock.style.display = type.includes("lp")?"block":"none";
+ octaveBlock.style.display=t.includes("oct")?"block":"none";
+ singleInput.style.display=t.includes("oct")?"none":"block";
+ measurementBlock.style.display=t.includes("lp")?"block":"none";
 });
 
-
-// ===== CALCUL =====
+// CALCUL
 function calculate(){
 
-  document.getElementById("error").innerText="";
-  document.getElementById("result").innerHTML="";
+ error.innerText="";
+ result.innerHTML="";
 
-  const type = document.getElementById("inputType").value;
-  const r = parseFloat(distance.value);
-  const targetValue = parseFloat(target.value);
-  const Q = parseFloat(document.getElementById("Q").value);
-  const ground = parseFloat(document.getElementById("ground").value);
+ let type=inputType.value;
+ let r=parseFloat(distance.value);
+ let Q=parseFloat(document.getElementById("Q").value);
+ let g=parseFloat(document.getElementById("ground").value);
 
-  if(!isValidNumber(r) || r<=0){
-    error.innerText="Distance invalide"; return;
-  }
+ let Lw_oct=[];
+ let Lw_global;
 
-  if(!isValidNumber(targetValue)){
-    error.innerText="Niveau cible invalide"; return;
-  }
+ // === GLOBAL ===
+ if(type==="lw" || type==="lp"){
 
-  let Lw_oct=[];
+  let v=parseFloat(value.value);
+  if(isNaN(v)){ error.innerText="Valeur invalide"; return;}
 
-  // ===== GLOBAL =====
-  if(type==="lw" || type==="lp"){
-
-    let value = parseFloat(document.getElementById("value").value);
-    if(!isValidNumber(value)){ error.innerText="Valeur invalide"; return; }
-
-    let Lw;
-
-    if(type==="lw"){
-      Lw=value;
-    } else {
-      let r_meas=parseFloat(measurementDistance.value);
-      if(!isValidNumber(r_meas)){ error.innerText="Distance mesure invalide"; return; }
-      Lw=lpToLw(value,r_meas);
-    }
-
-    // 🔥 CORRECTION CRITIQUE : création spectre équivalent
-    let Lw_equal = Lw - 10;
-    Lw_oct = Array(9).fill(Lw_equal);
-
+  if(type==="lw"){
+    Lw_global=v;
   } else {
-    // ===== BANDES =====
-    document.querySelectorAll(".oct").forEach(el=>{
-      let v=parseFloat(el.value);
-      if(!isValidNumber(v)){ error.innerText="Remplir toutes les bandes"; return; }
+    let r_meas=parseFloat(measurementDistance.value);
+    if(isNaN(r_meas)){ error.innerText="Distance mesure invalide"; return;}
+    Lw_global=lpToLw(v,r_meas);
+  }
+
+  let Lw_eq=Lw_global-10;
+  Lw_oct=Array(9).fill(Lw_eq);
+ }
+
+ // === BANDES ===
+ if(type==="lw_oct" || type==="lp_oct"){
+
+  document.querySelectorAll(".oct").forEach((el,i)=>{
+    let v=parseFloat(el.value);
+
+    if(i===0 && (el.value==="" || isNaN(v))){
+      Lw_oct.push(NaN);
+    } else {
+      if(isNaN(v)){ error.innerText="Compléter les bandes"; return; }
 
       if(type==="lp_oct"){
         let r_meas=parseFloat(measurementDistance.value);
-        if(!isValidNumber(r_meas)){ error.innerText="Distance mesure invalide"; return; }
         v=lpToLw(v,r_meas);
       }
 
       Lw_oct.push(v);
-    });
+    }
+  });
 
-    if(Lw_oct.length!==9) return;
-  }
+  Lw_global = sumLevels(Lw_oct); // ✅ calcul clé
+}
 
-  let LA = calcISO(Lw_oct,r,Q,ground);
-  let Lw_total = sumLevels(Lw_oct);
-  let rTarget = findDistance(Lw_oct,targetValue,Q,ground);
+let LA=calcISO(Lw_oct,r,Q,g);
 
-  result.innerHTML = `
-  <b>Lw global :</b> ${Lw_total.toFixed(1)} dB<br>
-  <b>LAeq à ${r} m :</b> ${LA.toFixed(1)} dB(A)<br>
-  <b>Distance pour ${targetValue} dB :</b> ${rTarget} m`;
+let targets=[40,45,50,55,70];
 
-  plotGraph(Lw_oct,Q,targetValue,ground);
+let table="<table><tr><th>Seuil (dB(A))</th><th>Distance (m)</th><th>Graph</th></tr>";
+
+targets.forEach((t,i)=>{
+ let d=findDistance(Lw_oct,t,Q,g);
+
+ table+=`
+ <tr>
+  <td>${t}</td>
+  <td>${d}</td>
+  <td><input type="radio" name="rad" value="${t}" ${i==1?"checked":""}></td>
+ </tr>`;
+});
+
+table+="</table>";
+
+result.innerHTML = `
+<b>Lw global :</b> ${Lw_global.toFixed(1)} dB<br>
+<b>LAeq à ${r} m :</b> ${LA.toFixed(1)} dB(A)<br>
+${table}
+`;
+
+plotGraph(Lw_oct,Q,g,45);
+
+document.querySelectorAll("input[name='rad']").forEach(radio=>{
+ radio.addEventListener("change",()=>{
+  plotGraph(Lw_oct,Q,g,parseFloat(radio.value));
+ });
+});
+
 }
 
 </script>
