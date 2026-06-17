@@ -41,20 +41,35 @@ td, th { border:1px solid #ccc; padding:6px;}
 
 .tooltip {
   visibility: hidden;
-  width: 260px;
-  background: #333;
-  color: #fff;
-  text-align: left;
-  padding: 8px;
+  width: 360px;
+  background: #2c3e50;
+  color: white;
+  padding: 12px;
   border-radius: 6px;
 
   position: absolute;
-  bottom: 125%;
-  left: 0;
-  z-index: 1;
+  top: 130%;
+  left: 50px;
 
-  font-size: 12px;
+  font-size: 13px;
+  line-height: 1.4;
+  z-index: 1000;
+
+  white-space: normal;   /* ✅ essentiel */
+  transform: translateX(-20px);
 }
+
+
+.tooltip div {
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+
+.help:hover .tooltip {
+  visibility: visible;
+}
+
 
 .help:hover .tooltip {
   visibility: visible;
@@ -93,6 +108,12 @@ td, th { border:1px solid #ccc; padding:6px;}
   font-weight: bold;
 }
 
+.blue {
+  color: #3498db;
+  font-weight: bold;
+}
+
+
 </style>
 </head>
 
@@ -100,15 +121,34 @@ td, th { border:1px solid #ccc; padding:6px;}
 
 <div class="container">
 
-<h2>Impact sonore – ISO 9613 simplifié</h2>
+  <h2>
+    Impact sonore – ISO 9613 simplifié
+    <span class="help">ⓘ
+      <span class="tooltip">
+        <div>
+          Cette application calcule une estimation simplifiée de l'impact sonore <span class="green">pour une seule source ponctuelle</span>.<br><br>
+          Le degré de précision de l'estimation dépend grandement de la qualité des données d'entrée.<br><br>
+          <span class="warning">
+            Les résultats de calculs sont à titre indicatif seulement et ne remplacent pas une analyse complète de la situation.
+          </span>
+        </div>
+      </span>
+    </span>
+  </h2>
 
 <label>Type d'entrée</label>
-<select id="inputType">
-<option value="lw">Puissance Lw</option>
-<option value="lp">Niveau Lp</option>
-<option value="lw_oct">Puissance par bandes</option>
-<option value="lp_oct">Niveau par bandes</option>
-</select>
+<div style="display:flex; gap:10px; align-items:center;">
+  <select id="inputType" style="flex:1;">
+    <option value="lw">Puissance Lw</option>
+    <option value="lp">Niveau Lp</option>
+    <option value="lw_oct">Puissance par bandes</option>
+    <option value="lp_oct">Niveau par bandes</option>
+  </select>
+
+  <button type="button" onclick="loadDemo()" style="width:auto;">
+    Démo
+  </button>
+</div>
 
 <div id="singleInput">
 <label><br>Valeur (dB)</label>
@@ -214,6 +254,50 @@ td, th { border:1px solid #ccc; padding:6px;}
 // constantes
 const A_weights = [-39.4,-26.2,-16.1,-8.6,-3.2,0,1.2,1,-1.1];
 const alpha = [0.05,0.1,0.2,0.5,1,2,5,10,20];
+
+function loadDemo(){
+
+let type = document.getElementById("inputType").value;
+
+// paramètres communs
+document.getElementById("distance").value = 100;
+document.getElementById("ground").value = 0;
+document.getElementById("Q").value = 4;
+
+// ===== CAS 1 : Lw =====
+if(type === "lw"){
+  document.getElementById("value").value = 100;
+}
+
+// ===== CAS 2 : Lp =====
+if(type === "lp"){
+  document.getElementById("value").value = 70;
+  document.getElementById("measurementDistance").value = 10;
+}
+
+// ===== CAS 3 : Lw par bandes =====
+if(type === "lw_oct"){
+
+  let demo = [85,90,95,100,102,100,95,90,85];
+
+  document.querySelectorAll(".oct").forEach((el,i)=>{
+    el.value = demo[i];
+  });
+}
+
+// ===== CAS 4 : Lp par bandes =====
+if(type === "lp_oct"){
+
+  let demo = [65,70,75,80,82,80,75,70,65];
+
+  document.querySelectorAll(".oct").forEach((el,i)=>{
+    el.value = demo[i];
+  });
+
+  document.getElementById("measurementDistance").value = 10;
+}
+
+}
 
 function sumLevels(levels){
  let s=0;
