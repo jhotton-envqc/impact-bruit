@@ -316,7 +316,7 @@ function sumLevels(levels){
 function Adiv(r){ return 20*Math.log10(r)+11;}
 function Aatm(a,r){ return a*r/1000;}
 function directivity(Q){ return 10*Math.log10(Q);}
-function lpToLw(Lp,r){ return Lp + 20*Math.log10(r)+11;}
+function lpToLw(Lp,r){ return Lp + 20*Math.log10(r)+8;}
 
 function calcISO(Lw_oct,r,Q,g){
  let LA=Lw_oct.map((Lw,i)=>{
