@@ -265,18 +265,23 @@ document.getElementById("distance").value = 100;
 document.getElementById("ground").value = 0;
 document.getElementById("Q").value = 4;
 
-// ===== CAS 1 : Lw =====
-if(type === "lw"){
-  document.getElementById("value").value = 100;
+// ===== CAS 1 : Lw linéaire =====
+if(type === "lw_lin"){
+  document.getElementById("value").value = 105;
 }
 
-// ===== CAS 2 : Lp =====
+// ===== CAS 2 : LwA =====
+if(type === "lwA"){
+  document.getElementById("value").value = 95;
+}
+
+// ===== CAS 3 : Lp =====
 if(type === "lp"){
   document.getElementById("value").value = 70;
   document.getElementById("measurementDistance").value = 10;
 }
 
-// ===== CAS 3 : Lw par bandes =====
+// ===== CAS 4 : Lw par bandes =====
 if(type === "lw_oct"){
 
   let demo = [85,90,95,100,102,100,95,90,85];
@@ -286,7 +291,7 @@ if(type === "lw_oct"){
   });
 }
 
-// ===== CAS 4 : Lp par bandes =====
+// ===== CAS 5 : Lp par bandes =====
 if(type === "lp_oct"){
 
   let demo = [65,70,75,80,82,80,75,70,65];
