@@ -139,8 +139,9 @@ td, th { border:1px solid #ccc; padding:6px;}
 <label>Type d'entrée</label>
 <div style="display:flex; gap:10px; align-items:center;">
   <select id="inputType" style="flex:1;">
-    <option value="lw">Puissance Lw</option>
-    <option value="lp">Niveau Lp</option>
+    <option value="lw_lin">Puissance Lw (dB linéaire)</option>
+    <option value="lwA">Puissance LwA (dB(A))</option>
+    <option value="lp">Niveau LAeq (dB(A))</option>
     <option value="lw_oct">Puissance par bandes</option>
     <option value="lp_oct">Niveau par bandes</option>
   </select>
@@ -151,7 +152,7 @@ td, th { border:1px solid #ccc; padding:6px;}
 </div>
 
 <div id="singleInput">
-<label><br>Valeur (dB)</label>
+<label>Valeur (dB ou dB(A) selon le type)</label>
 <input id="value">
 </div>
 
@@ -378,21 +379,33 @@ function calculate(){
  let Lw_global;
 
  // === GLOBAL ===
- if(type==="lw" || type==="lp"){
+ if(type==="lw_lin" || type==="lwA" || type==="lp"){
 
   let v=parseFloat(value.value);
   if(isNaN(v)){ error.innerText="Valeur invalide"; return;}
 
-  if(type==="lw"){
-    Lw_global=v;
-  } else {
-    let r_meas=parseFloat(measurementDistance.value);
-    if(isNaN(r_meas)){ error.innerText="Distance mesure invalide"; return;}
-    Lw_global=lpToLw(v,r_meas);
-  }
+  if(type==="lw_lin"){
+  Lw_global = v;
+}
+else if(type==="lwA"){
+  Lw_global = v;  // déjà pondéré A ✅
+}
+else if(type==="lp"){
+  let r_meas=parseFloat(measurementDistance.value);
+  if(isNaN(r_meas)){ error.innerText="Distance mesure invalide"; return;}
+  Lw_global=lpToLw(v,r_meas);
+}
 
-  let Lw_eq=Lw_global-10;
-  Lw_oct=Array(9).fill(Lw_eq);
+if(type==="lwA"){
+  // spectre déjà pondéré → on retire les pondérations pour éviter double comptage
+  let Lw_eq = Lw_global - 10;
+
+  Lw_oct = A_weights.map(w => Lw_eq - w);
+}
+else{
+  let Lw_eq = Lw_global - 10;
+  Lw_oct = Array(9).fill(Lw_eq);
+}
  }
 
  // === BANDES ===
