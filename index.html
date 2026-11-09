@@ -7,6 +7,9 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
+* {
+    box-sizing: border-box;
+}
 body { font-family: Arial; margin:30px; background:#f5f7fa;}
 .container { max-width:950px; background:white; padding:20px; border-radius:10px;}
 
@@ -19,6 +22,11 @@ button {
   background:#3498db;
   color:white;
   border:none;
+}
+
+button:disabled {
+  background: #95a5a6;
+  cursor: not-allowed;
 }
 
 .octave-row { display:flex; gap:6px; overflow-x:auto;}
@@ -114,6 +122,9 @@ td, th { border:1px solid #ccc; padding:6px;}
 }
 
 
+
+
+
 </style>
 </head>
 
@@ -123,30 +134,62 @@ td, th { border:1px solid #ccc; padding:6px;}
 
   <h2>
     Impact sonore – ISO 9613 simplifié
+
+
+
     <span class="help">ⓘ
       <span class="tooltip">
         <div>
-          Cette application calcule une estimation simplifiée de l'impact sonore <span class="green">pour une seule source ponctuelle </span><span class="blue">avec une topographie plane sans écrans</span>.<br><br>
+          Cette application calcule une estimation simplifiée de l'impact sonore
+          <span class="green">pour une seule source ponctuelle </span>
+          <span class="blue">avec une topographie plane et l'absence d'écrans</span>.<br><br>
+
           Le degré de précision de l'estimation dépend grandement de la qualité des données d'entrée.<br><br>
+
           <span class="warning">
             Les résultats de calculs sont à titre indicatif seulement et ne remplacent pas une analyse complète de la situation.
-          </span>
+          </span><br><br>
         </div>
       </span>
     </span>
   </h2>
 
+  <div style="margin-top:-10px; margin-bottom:20px;">
+    <a
+      href="documentation.html"
+      target="_blank"
+      style="
+        font-size:0.9em;
+        text-decoration:none;
+        color:#3498db;
+        font-weight:bold;
+      "
+    >
+      📘 Consulter la documentation
+    </a>
+  </div>
+  
+
 <label>Type d'entrée</label>
-<div style="display:flex; gap:10px; align-items:center;">
+<div style="display:flex; gap:10px;">
   <select id="inputType" style="flex:1;">
     <option value="lw_lin">Puissance Lw (dB linéaire)</option>
     <option value="lwA">Puissance LwA (dB(A))</option>
-    <option value="lp">Niveau LAeq (dB(A))</option>
     <option value="lw_oct">Puissance par bandes</option>
+    <option value="lp">Niveau LAeq (dB(A))</option>
     <option value="lp_oct">Niveau par bandes</option>
   </select>
 
-  <button type="button" onclick="loadDemo()" style="width:auto;">
+  <button
+    type="button"
+    onclick="loadDemo()"
+    style="
+      width:80px;
+      margin-top:5px;
+      padding:6px 12px;
+      flex-shrink:0;
+    "
+  >
     Démo
   </button>
 </div>
@@ -157,7 +200,13 @@ td, th { border:1px solid #ccc; padding:6px;}
 </div>
 
 <div id="octaveBlock" style="display:none;">
-<label><br>Bandes d’octave</label>
+<label>
+  <br>
+  Bandes d’octave
+  <span style="font-size:0.85em; font-weight:normal;">
+    (31.5 Hz optionnel)
+  </span>
+</label>
 <div class="octave-row">
 <div><span>31.5 Hz</span><input class="oct"></div>
 <div><span>63 Hz</span><input class="oct"></div>
@@ -241,7 +290,7 @@ td, th { border:1px solid #ccc; padding:6px;}
     </select>
     
 
-<button onclick="calculate()">Calculer</button>
+  <button id="calculateBtn" onclick="calculate()">Calculer</button>
 
 <div id="error" class="error"></div>
 <div id="result"></div>
@@ -256,42 +305,148 @@ td, th { border:1px solid #ccc; padding:6px;}
 const A_weights = [-39.4,-26.2,-16.1,-8.6,-3.2,0,1.2,1,-1.1];
 const alpha = [0.05,0.1,0.2,0.5,1,2,5,10,20];
 
+
+// ✅ NOUVEAU : fonction incertitude
+function getUncertainty(type){
+
+if(type === "lw_oct"){
+  return { label:"✅ Élevée", value:"±2 dB", numeric:2, color:"#2ecc71" };
+}
+
+if(type === "lw_lin"){
+  return { label:"✅ Bonne", value:"±3 dB", numeric:3, color:"#27ae60" };
+}
+
+if(type === "lwA"){
+  return { label:"⚠ Moyenne", value:"±5 dB", numeric:5, color:"#f39c12" };
+}
+
+if(type === "lp_oct"){
+  return { label:"⚠ Moyenne-faible", value:"±6 dB", numeric:6, color:"#e67e22" };
+}
+
+if(type === "lp"){
+  return { label:"❌ Faible", value:"±8 à 10 dB", numeric:9, color:"#e74c3c" };
+}
+
+return { label:"Inconnue", value:"-", color:"#666" };
+}
+
+
+function clearResults(){
+
+result.innerHTML = "<i>Résultat à recalculer...</i>";
+error.innerText = "";
+
+document.getElementById("chart").style.display = "none";
+
+
+if(chart){
+  chart.destroy();
+  chart = null;
+}
+
+const canvas = document.getElementById("chart");
+const ctx = canvas.getContext("2d");
+ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+updateCalculateButton();
+}
+
+function updateCalculateButton(){
+
+  let type = inputType.value;
+  let valid = true;
+
+  // Distance d'évaluation
+let r = parseFloat(distance.value);
+
+if(isNaN(r) || r <= 0){
+  valid = false;
+}
+
+  // Cas valeur unique
+  if(type === "lw_lin" || type === "lwA" || type === "lp"){
+    if(value.value.trim() === ""){
+      valid = false;
+    }
+  }
+
+  // Cas bandes
+  if(type === "lw_oct" || type === "lp_oct"){
+      document.querySelectorAll(".oct").forEach((el,i)=>{
+        // 31,5 Hz (index 0) optionnelle
+        if(i === 0) return;
+
+        if(el.value.trim() === ""){
+          valid = false;
+        }
+      });
+  }
+
+  // Cas nécessitant une distance de mesure
+  if(type === "lp" || type === "lp_oct"){
+    let rMeas = parseFloat(measurementDistance.value);
+
+    if(isNaN(rMeas) || rMeas <= 0){
+      valid = false;
+    }
+  }
+
+  document.getElementById("calculateBtn").disabled = !valid;
+}
+
+function resetInputs(){
+
+  // Valeur unique
+  value.value = "";
+
+  // Distance de mesure
+  measurementDistance.value = "";
+
+  // Bandes d'octave
+  document.querySelectorAll(".oct").forEach(el=>{
+    el.value = "";
+  });
+
+}
+
 function loadDemo(){
 
-let type = document.getElementById("inputType").value;
+  let type = document.getElementById("inputType").value;
 
-// paramètres communs
-document.getElementById("distance").value = 100;
-document.getElementById("ground").value = 0;
-document.getElementById("Q").value = 4;
+  // paramètres communs
+  document.getElementById("distance").value = 100;
+  document.getElementById("ground").value = 0;
+  document.getElementById("Q").value = 4;
 
-// ===== CAS 1 : Lw linéaire =====
-if(type === "lw_lin"){
-  document.getElementById("value").value = 105;
-}
+  // ===== CAS 1 : Lw linéaire =====
+  if(type === "lw_lin"){
+    document.getElementById("value").value = 105;
+  }
 
-// ===== CAS 2 : LwA =====
-if(type === "lwA"){
-  document.getElementById("value").value = 95;
-}
+  // ===== CAS 2 : LwA =====
+  if(type === "lwA"){
+    document.getElementById("value").value = 95;
+  }
 
-// ===== CAS 3 : Lp =====
-if(type === "lp"){
-  document.getElementById("value").value = 70;
-  document.getElementById("measurementDistance").value = 10;
-}
+  // ===== CAS 3 : Lp =====
+  if(type === "lp"){
+    document.getElementById("value").value = 70;
+    document.getElementById("measurementDistance").value = 10;
+  }
 
-// ===== CAS 4 : Lw par bandes =====
-if(type === "lw_oct"){
+  // ===== CAS 4 : Lw par bandes =====
+  if(type === "lw_oct"){
 
-  let demo = [85,90,95,100,102,100,95,90,85];
+    let demo = [85,90,95,100,102,100,95,90,85];
 
-  document.querySelectorAll(".oct").forEach((el,i)=>{
-    el.value = demo[i];
-  });
-}
+    document.querySelectorAll(".oct").forEach((el,i)=>{
+      el.value = demo[i];
+    });
+  }
 
-// ===== CAS 5 : Lp par bandes =====
+  // ===== CAS 5 : Lp par bandes =====
 if(type === "lp_oct"){
 
   let demo = [65,70,75,80,82,80,75,70,65];
@@ -301,9 +456,13 @@ if(type === "lp_oct"){
   });
 
   document.getElementById("measurementDistance").value = 10;
-}
 
 }
+
+updateCalculateButton();
+
+}
+
 
 function sumLevels(levels){
  let s=0;
@@ -316,7 +475,11 @@ function sumLevels(levels){
 function Adiv(r){ return 20*Math.log10(r)+11;}
 function Aatm(a,r){ return a*r/1000;}
 function directivity(Q){ return 10*Math.log10(Q);}
-function lpToLw(Lp,r){ return Lp + 20*Math.log10(r)+8;}
+function lpToLw(Lp,r,Q){
+    return Lp
+         - directivity(Q)
+         + Adiv(r);
+}
 
 function calcISO(Lw_oct,r,Q,g){
  let LA=Lw_oct.map((Lw,i)=>{
@@ -338,35 +501,193 @@ function findDistance(Lw_oct,target,Q,g){
 
 // GRAPH
 let chart;
-function plotGraph(Lw_oct,Q,g,target){
+function plotGraph(
+  Lw_oct,
+  Q,
+  g,
+  threshold,
+  uncertainty
+){
 
- let d=[],L=[];
- for(let r=10;r<=1000;r+=10){
+document.getElementById("chart").style.display = "block";
+
+let d=[], L=[];
+let Lupper=[], Llower=[];
+
+
+for(let r=10;r<=1000;r+=10){
+
+  let LA = calcISO(Lw_oct,r,Q,g);
+
   d.push(r);
-  L.push(calcISO(Lw_oct,r,Q,g));
- }
 
- if(chart) chart.destroy();
+  L.push(LA);
+  Lupper.push(LA + uncertainty);
+  Llower.push(LA - uncertainty);
+}
 
- chart=new Chart(document.getElementById("chart"),{
+
+if(chart) chart.destroy();
+
+chart = new Chart(document.getElementById("chart"),{
   type:'line',
-  data:{
-   labels:d,
-   datasets:[
-    {label:"LAeq",data:L},
-    {label:"Seuil",data:d.map(()=>target),borderDash:[5,5]}
-   ]
+  
+data:{
+  datasets:[
+  {
+    label:"LAeq",
+    data:d.map((x,i)=>({x:x, y:L[i]})),
+    borderWidth:2,
+    borderColor:"#3498db",      // ✅ BLEU
+    backgroundColor:"#3498db",
+    pointRadius: 0,
+    pointHoverRadius: 5,   // ✅ rend le point interactif
+    hitRadius: 10          // ✅ zone de détection plus large
+  },
+{
+  label:"Limite supérieure",
+  data:d.map((x,i)=>({x:x, y:Lupper[i]})),
+  borderColor:"rgba(120,120,120,0.8)",
+  borderDash:[5,5],
+  borderWidth:1,
+  pointRadius:0,
+  fill:false
+},
+
+  {
+    label:`±${uncertainty} dB`,
+    data:d.map((x,i)=>({x:x, y:Llower[i]})),
+    borderColor:"rgba(120,120,120,0.6)",
+    borderDash:[5,5],
+    borderWidth:1,
+    pointRadius:0,
+
+    fill:'-1',
+
+    backgroundColor:"rgba(120,120,120,0.12)"
+  },
+
+  {
+    label:"Seuil",
+    data:d.map(x=>({x:x, y:threshold})),
+    borderDash:[5,5],
+    borderWidth:2,
+    borderColor:"#e74c3c",      // ✅ ROUGE
+    pointRadius:0
+  },
+
+  // légende 150 m
+  {
+    label:"150 m",
+    data:[],
+    borderColor:"purple",
+    borderDash:[6,4],
+    borderWidth:2
+  },
+
+  // légende 600 m
+  {
+    label:"600 m",
+    data:[],
+    borderColor:"orange",
+    borderDash:[6,4],
+    borderWidth:2
   }
- });
+]
+},
+
+options:{
+  interaction: {
+    mode: 'nearest',
+    intersect: false
+  },
+
+plugins:{
+  legend:{
+    display:true,
+
+    labels:{
+      filter:(legendItem, chartData) => {
+
+        const text = legendItem.text || "";
+
+        return text !== "Limite supérieure";
+      }
+    }
+  },
+
+  tooltip:{
+    enabled:true
+  }
+},
+
+  scales:{
+    x:{
+      type:'linear',
+      title:{ display:true, text:"Distance (m)"}
+    },
+    y:{
+      title:{ display:true, text:"dB(A)"}
+    }
+  }
+},
+
+  plugins: [{
+    id: 'verticalLines',
+    afterDraw: (chart) => {
+
+      const ctx = chart.ctx;
+      const xScale = chart.scales.x;
+      const yScale = chart.scales.y;
+
+      function drawLine(xValue, color, label){
+
+        if(!xScale || !yScale) return;
+
+        const x = xScale.getPixelForValue(xValue);
+
+        if(isNaN(x)) return;
+
+        ctx.save();
+
+        // ligne
+        ctx.beginPath();
+        ctx.moveTo(x, yScale.top);
+        ctx.lineTo(x, yScale.bottom);
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = color;
+        ctx.setLineDash([6,4]);
+        ctx.stroke();
+
+        // label
+        ctx.fillStyle = color;
+        ctx.font = "12px Arial";
+        ctx.fillText(label, x + 5, yScale.top + 15);
+
+        ctx.restore();
+      }
+
+      drawLine(150, "purple", "150 m");
+      drawLine(600, "orange", "600 m");
+    }
+  }]
+});
+
+
 }
 
 // UI
 inputType.addEventListener("change",()=>{
  let t=inputType.value;
 
+ resetInputs();
+ clearResults();
+
  octaveBlock.style.display=t.includes("oct")?"block":"none";
  singleInput.style.display=t.includes("oct")?"none":"block";
  measurementBlock.style.display=t.includes("lp")?"block":"none";
+
+ updateCalculateButton();
 });
 
 // CALCUL
@@ -376,42 +697,113 @@ function calculate(){
  result.innerHTML="";
 
  let type=inputType.value;
+
+ // ✅ NOUVEAU
+let uncertainty = getUncertainty(type);
+
  let r=parseFloat(distance.value);
+ if(isNaN(r) || r <= 0){
+  error.innerText =
+    "La distance d'évaluation doit être supérieure à 0 m.";
+  return;
+}
  let Q=parseFloat(document.getElementById("Q").value);
  let g=parseFloat(document.getElementById("ground").value);
 
  let Lw_oct=[];
  let Lw_global;
 
- // === GLOBAL ===
- if(type==="lw_lin" || type==="lwA" || type==="lp"){
+// === GLOBAL ===
+if(type==="lw_lin" || type==="lwA" || type==="lp"){
 
-  let v=parseFloat(value.value);
-  if(isNaN(v)){ error.innerText="Valeur invalide"; return;}
+  let v = parseFloat(value.value);
 
-  if(type==="lw_lin"){
-  Lw_global = v;
-}
-else if(type==="lwA"){
-  Lw_global = v;  // déjà pondéré A ✅
-}
-else if(type==="lp"){
-  let r_meas=parseFloat(measurementDistance.value);
-  if(isNaN(r_meas)){ error.innerText="Distance mesure invalide"; return;}
-  Lw_global=lpToLw(v,r_meas);
-}
+  if(isNaN(v)){
+    error.innerText = "Valeur invalide";
+    return;
+  }
 
-if(type==="lwA"){
-  // spectre déjà pondéré → on retire les pondérations pour éviter double comptage
-  let Lw_eq = Lw_global - 10;
+  // Détermination de Lw global
+  if(type === "lw_lin"){
 
-  Lw_oct = A_weights.map(w => Lw_eq - w);
+    Lw_global = v;
+
+  }
+  else if(type === "lwA"){
+
+    Lw_global = v; // déjà pondéré A
+
+  }
+  else if(type === "lp"){
+
+    let r_meas = parseFloat(measurementDistance.value);
+
+    if(isNaN(r_meas) || r_meas <= 0){
+      error.innerText =
+        "La distance de mesure doit être supérieure à 0 m.";
+      return;
+    }
+    
+    if(isNaN(r_meas)){
+      error.innerText = "Distance mesure invalide";
+      return;
+    }
+
+    Lw_global = lpToLw(v,r_meas,Q);
+
+  }
+
+  // ===== Puissance LwA =====
+  if(type === "lwA"){
+
+    const profile = [-8,-5,-2,0,0,-2,-5,-8,-12];
+
+    const energy = profile.reduce(
+      (sum,v) => sum + Math.pow(10,v/10),
+      0
+    );
+
+    const offset = 10 * Math.log10(energy);
+
+    Lw_oct = profile.map(
+      v => Lw_global - offset + v
+    );
+
+
+  }
+
+  // ===== Niveau LAeq =====
+  else if(type === "lp"){
+
+    let Lw_eq = Lw_global - 10;
+
+    Lw_oct = A_weights.map(
+      w => Lw_eq - w
+    );
+
+
+  }
+
+  // ===== Puissance Lw linéaire =====
+  else{
+
+    const profile = [-8,-5,-2,0,0,-2,-5,-8,-12];
+
+    const energy = profile.reduce(
+      (sum,v) => sum + Math.pow(10,v/10),
+      0
+    );
+
+    const offset = 10 * Math.log10(energy);
+
+    Lw_oct = profile.map(
+      v => Lw_global - offset + v
+    );
+
+  }
+
+
 }
-else{
-  let Lw_eq = Lw_global - 10;
-  Lw_oct = Array(9).fill(Lw_eq);
-}
- }
 
  // === BANDES ===
  if(type==="lw_oct" || type==="lp_oct"){
@@ -422,18 +814,32 @@ else{
     if(i===0 && (el.value==="" || isNaN(v))){
       Lw_oct.push(NaN);
     } else {
-      if(isNaN(v)){ error.innerText="Compléter les bandes"; return; }
+      if(isNaN(v)){
+
+        // 31,5 Hz optionnelle
+        if(i === 0){
+          Lw_oct.push(-200);
+          return;
+        }
+
+        error.innerText="Compléter les bandes";
+        return;
+      }
 
       if(type==="lp_oct"){
         let r_meas=parseFloat(measurementDistance.value);
-        v=lpToLw(v,r_meas);
+        v=lpToLw(v,r_meas,Q);
       }
 
       Lw_oct.push(v);
     }
   });
-
+  
+  
   Lw_global = sumLevels(Lw_oct); // ✅ calcul clé
+
+
+
 }
 
 let LA=calcISO(Lw_oct,r,Q,g);
@@ -458,25 +864,71 @@ table+="</table>";
 result.innerHTML = `
 <b>Lw global :</b> ${Lw_global.toFixed(1)} dB<br>
 <b>LAeq à ${r} m :</b> ${LA.toFixed(1)} dB(A)<br>
+
+<div style="
+  margin-top:10px;
+  padding:8px;
+  border-left:5px solid ${uncertainty.color};
+  background:#eef2f7;
+">
+<b>Précision estimée :</b>
+<span style="color:${uncertainty.color}; font-weight:bold;">
+${uncertainty.label}
+</span>
+(${uncertainty.value})
+</div>
+
 ${table}
 `;
 
-plotGraph(Lw_oct,Q,g,45);
+
+plotGraph(
+  Lw_oct,
+  Q,
+  g,
+  45,
+  uncertainty.numeric
+);
 
 document.querySelectorAll("input[name='rad']").forEach(radio=>{
  radio.addEventListener("change",()=>{
-  plotGraph(Lw_oct,Q,g,parseFloat(radio.value));
+  plotGraph(
+  Lw_oct,
+  Q,
+  g,
+  parseFloat(radio.value),
+  uncertainty.numeric
+  );
  });
 });
 
 }
 
+
+
+// 🔄 Reset automatique quand l'utilisateur modifie une entrée
+
+document.querySelectorAll("input, select").forEach(el=>{
+  el.addEventListener("input", ()=>{
+    clearResults();
+    updateCalculateButton();
+  });
+
+  el.addEventListener("change", ()=>{
+    clearResults();
+    updateCalculateButton();
+  });
+});
+
+updateCalculateButton();
+
 </script>
+
 <!-- Cloudflare Web Analytics -->
   <script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "4cfe58e538214e69bbb021a15713786d"}'>
     
   </script>
   <!-- End Cloudflare Web Analytics -->
-  
+
 </body>
 </html>

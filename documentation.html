@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Documentation - Impact sonore ISO 9613 simplifié</title>
+
+<style>
+body{
+    font-family:Arial, sans-serif;
+    margin:30px;
+    background:#f5f7fa;
+    line-height:1.6;
+}
+
+.container{
+    max-width:1000px;
+    margin:auto;
+    background:white;
+    padding:25px;
+    border-radius:10px;
+    box-shadow:0 2px 8px rgba(0,0,0,0.1);
+}
+
+h1{
+    color:#2c3e50;
+    border-bottom:3px solid #3498db;
+    padding-bottom:10px;
+}
+
+h2{
+    color:#2980b9;
+    margin-top:35px;
+}
+
+h3{
+    color:#34495e;
+}
+
+table{
+    border-collapse:collapse;
+    width:100%;
+    margin-top:10px;
+}
+
+th,td{
+    border:1px solid #ccc;
+    padding:8px;
+    text-align:left;
+}
+
+th{
+    background:#ecf0f1;
+}
+
+.note{
+    padding:12px;
+    border-left:5px solid #3498db;
+    background:#eef6fc;
+    margin:15px 0;
+}
+
+.warning{
+    padding:12px;
+    border-left:5px solid #e74c3c;
+    background:#fdecec;
+    margin:15px 0;
+}
+
+code{
+    background:#f4f4f4;
+    padding:2px 5px;
+    border-radius:3px;
+}
+
+a.button{
+    display:inline-block;
+    padding:10px 15px;
+    background:#3498db;
+    color:white;
+    text-decoration:none;
+    border-radius:5px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h1>Documentation de l'application</h1>
+
+<p>
+Cette application permet d'estimer rapidement l'impact sonore d'une source ponctuelle à l'aide
+d'une méthode simplifiée inspirée de l'ISO 9613.
+Elle constitue un outil d'aide à la décision et de sensibilisation aux phénomènes de propagation sonore.
+</p>
+
+<a href="index.html" class="button">Retour à l'application</a>
+
+
+<h2>Limites de cette application</h2>
+
+<div class="warning">
+
+<ul>
+<li>Une seule source ponctuelle est modélisée.</li>
+<li>Le terrain est supposé plat.</li>
+<li>Aucun écran acoustique n'est pris en compte.</li>
+<li>Aucune diffraction n'est calculée.</li>
+<li>Aucun effet météorologique n'est considéré.</li>
+<li>Les résultats représentent une estimation préliminaire seulement.</li>
+<li>Les données globales peuvent nécessiter la reconstruction d'un spectre fréquentiel représentatif.</li>
+</ul>
+
+</div>
+
+
+
+<h2>Objectif</h2>
+
+<p>
+L'application permet :
+</p>
+
+<ul>
+<li>d'estimer un niveau sonore à une distance donnée;</li>
+<li>d'évaluer des distances d'atteinte pour différents seuils;</li>
+<li>de comparer l'effet de la distance;</li>
+<li>de tenir compte de la directivité de la source;</li>
+<li>d'estimer l'effet du type de sol;</li>
+<li>de visualiser graphiquement la décroissance sonore.</li>
+</ul>
+
+<h2>Types d'entrée disponibles</h2>
+
+<table>
+<tr>
+<th>Type</th>
+<th>Description</th>
+</tr>
+
+<tr>
+<td>Puissance Lw</td>
+<td>Puissance acoustique globale non pondérée.</td>
+</tr>
+
+<tr>
+<td>Puissance LwA</td>
+<td>Puissance acoustique globale pondérée A.</td>
+</tr>
+
+<tr>
+<td>Puissance par bandes</td>
+<td>Niveaux de puissance par bandes d'octave.</td>
+</tr>
+
+<tr>
+<td>Niveau LAeq</td>
+<td>Niveau sonore mesuré à une distance connue.</td>
+</tr>
+
+<tr>
+<td>Niveau par bandes</td>
+<td>Niveaux sonores mesurés par bandes d'octave.</td>
+</tr>
+
+</table>
+
+<h2>Méthode de calcul</h2>
+
+<h3>Propagation simplifiée</h3>
+
+<p>
+Pour chaque bande d'octave, le niveau sonore est estimé selon la relation :
+</p>
+
+<div class="note">
+Lp = Lw + Directivité − Divergence − Absorption atmosphérique − Effet de sol
+</div>
+
+<h3>Divergence géométrique</h3>
+
+<p>
+La diminution du niveau avec la distance est calculée selon :
+</p>
+
+<div class="note">
+Adiv = 20 log10(r) + 11
+</div>
+
+<p>
+où :
+</p>
+
+<ul>
+<li>r = distance entre la source et le récepteur (m)</li>
+</ul>
+
+<h3>Directivité</h3>
+
+<p>
+La directivité est calculée à partir du facteur Q :
+</p>
+
+<div class="note">
+Directivité = 10 log10(Q)
+</div>
+
+<table>
+<tr>
+<th>Configuration</th>
+<th>Q</th>
+<th>Gain</th>
+</tr>
+
+<tr>
+<td>Sol</td>
+<td>2</td>
+<td>+3 dB</td>
+</tr>
+
+<tr>
+<td>Mur</td>
+<td>4</td>
+<td>+6 dB</td>
+</tr>
+
+<tr>
+<td>Coin</td>
+<td>8</td>
+<td>+9 dB</td>
+</tr>
+
+</table>
+
+<h3>Absorption atmosphérique</h3>
+
+<p>
+L'application applique des coefficients simplifiés d'atténuation atmosphérique dépendant de la fréquence.
+</p>
+
+<p>
+Ces coefficients sont représentatifs uniquement et ne tiennent pas compte :
+</p>
+
+<ul>
+<li>de la température;</li>
+<li>de l'humidité relative;</li>
+<li>de la pression atmosphérique.</li>
+</ul>
+
+<h3>Effet de sol</h3>
+
+<table>
+<tr>
+<th>Type de sol</th>
+<th>Paramètre g</th>
+</tr>
+
+<tr>
+<td>Dur (béton, roche, eau)</td>
+<td>0</td>
+</tr>
+
+<tr>
+<td>Mixte</td>
+<td>2</td>
+</tr>
+
+<tr>
+<td>Mou (herbe, neige)</td>
+<td>4</td>
+</tr>
+
+</table>
+
+<p>
+Cette approche constitue une simplification de l'ISO 9613 complète.
+</p>
+
+<h2>Graphique</h2>
+
+<p>
+Le graphique affiche :
+</p>
+
+<ul>
+<li>la courbe LAeq estimée;</li>
+<li>un corridor d'incertitude;</li>
+<li>le seuil sélectionné;</li>
+<li>une ligne verticale à 150 m;</li>
+<li>une ligne verticale à 600 m.</li>
+</ul>
+
+<h2>Précision estimée</h2>
+
+<table>
+<tr>
+<th>Type d'entrée</th>
+<th>Précision estimée</th>
+</tr>
+
+<tr>
+<td>Puissance par bandes</td>
+<td>±2 dB</td>
+</tr>
+
+<tr>
+<td>Puissance Lw</td>
+<td>±3 dB</td>
+</tr>
+
+<tr>
+<td>Puissance LwA</td>
+<td>±5 dB</td>
+</tr>
+
+<tr>
+<td>Niveau par bandes</td>
+<td>±6 dB</td>
+</tr>
+
+<tr>
+<td>Niveau LAeq</td>
+<td>±8 à 10 dB</td>
+</tr>
+
+</table>
+
+<p>
+Ces valeurs sont indicatives et visent à représenter les incertitudes associées aux simplifications du modèle ainsi qu'à la qualité des données d'entrée.
+</p>
+
+
+<h2>Interprétation des résultats</h2>
+
+<p>
+Les résultats doivent être considérés comme des ordres de grandeur permettant :
+</p>
+
+<ul>
+<li>d'évaluer rapidement un scénario;</li>
+<li>de comparer plusieurs options;</li>
+<li>d'identifier des enjeux potentiels;</li>
+<li>de soutenir des analyses préliminaires.</li>
+</ul>
+
+<p>
+Pour des projets réglementaires ou des situations complexes,
+une étude acoustique complète demeure recommandée.
+</p>
+
+<h2>Historique des versions</h2>
+
+<table>
+<tr>
+<th>Version</th>
+<th>Description</th>
+</tr>
+
+<tr>
+<td>1.0</td>
+<td>Version initiale de la documentation.</td>
+</tr>
+</table>
+
+</div>
+
+</body>
+</html>

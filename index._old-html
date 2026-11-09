@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Impact Bruit</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+body { font-family: Arial; margin:30px; background:#f5f7fa;}
+.container { max-width:950px; background:white; padding:20px; border-radius:10px;}
+
+input, select { width:100%; padding:6px; margin-top:5px;}
+
+button {
+  margin-top:15px;
+  padding:10px;
+  width:100%;
+  background:#3498db;
+  color:white;
+  border:none;
+}
+
+.octave-row { display:flex; gap:6px; overflow-x:auto;}
+.octave-row div { display:flex; flex-direction:column; align-items:center;}
+.oct { width:55px; text-align:center;}
+
+table { border-collapse: collapse; margin-top:10px;}
+td, th { border:1px solid #ccc; padding:6px;}
+
+.error { color:red; margin-top:10px;}
+
+.help {
+  position: relative;
+  display: inline-block;
+  margin-left: 5px;
+  color: #3498db;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.tooltip {
+  visibility: hidden;
+  width: 360px;
+  background: #2c3e50;
+  color: white;
+  padding: 12px;
+  border-radius: 6px;
+
+  position: absolute;
+  top: 130%;
+  left: 50px;
+
+  font-size: 13px;
+  line-height: 1.4;
+  z-index: 1000;
+
+  white-space: normal;   /* ✅ essentiel */
+  transform: translateX(-20px);
+}
+
+
+.tooltip div {
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+
+.help:hover .tooltip {
+  visibility: visible;
+}
+
+
+.help:hover .tooltip {
+  visibility: visible;
+}
+
+
+.tooltip-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 5px;
+}
+
+.tooltip-table td,
+.tooltip-table th {
+  border: 1px solid #ccc;
+  padding: 4px;
+  text-align: center;
+  background: white;
+  color: black;
+}
+
+.tooltip-table th {
+  background: #ecf0f1;
+}
+
+.tip {
+  display: block;
+  margin-top: 6px;
+  color: #2ecc71;
+  font-weight: bold;
+}
+
+
+.green {
+  color: #2ecc71;
+  font-weight: bold;
+}
+
+.blue {
+  color: #3498db;
+  font-weight: bold;
+}
+
+
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+  <h2>
+    Impact sonore – ISO 9613 simplifié
+    <span class="help">ⓘ
+      <span class="tooltip">
+        <div>
+          Cette application calcule une estimation simplifiée de l'impact sonore <span class="green">pour une seule source ponctuelle </span><span class="blue">avec une topographie plane sans écrans</span>.<br><br>
+          Le degré de précision de l'estimation dépend grandement de la qualité des données d'entrée.<br><br>
+          <span class="warning">
+            Les résultats de calculs sont à titre indicatif seulement et ne remplacent pas une analyse complète de la situation.
+          </span>
+        </div>
+      </span>
+    </span>
+  </h2>
+
+<label>Type d'entrée</label>
+<div style="display:flex; gap:10px; align-items:center;">
+  <select id="inputType" style="flex:1;">
+    <option value="lw_lin">Puissance Lw (dB linéaire)</option>
+    <option value="lwA">Puissance LwA (dB(A))</option>
+    <option value="lp">Niveau LAeq (dB(A))</option>
+    <option value="lw_oct">Puissance par bandes</option>
+    <option value="lp_oct">Niveau par bandes</option>
+  </select>
+
+  <button type="button" onclick="loadDemo()" style="width:auto;">
+    Démo
+  </button>
+</div>
+
+<div id="singleInput">
+<label>Valeur (dB ou dB(A) selon le type)</label>
+<input id="value">
+</div>
+
+<div id="octaveBlock" style="display:none;">
+<label><br>Bandes d’octave</label>
+<div class="octave-row">
+<div><span>31.5 Hz</span><input class="oct"></div>
+<div><span>63 Hz</span><input class="oct"></div>
+<div><span>125 Hz</span><input class="oct"></div>
+<div><span>250 Hz</span><input class="oct"></div>
+<div><span>500 Hz</span><input class="oct"></div>
+<div><span>1 kHz</span><input class="oct"></div>
+<div><span>2 kHz</span><input class="oct"></div>
+<div><span>4 kHz</span><input class="oct"></div>
+<div><span>8 kHz</span><input class="oct"></div>
+</div>
+</div>
+
+<div id="measurementBlock" style="display:none;">
+<label><br>Distance de mesure (m)</label>
+<input id="measurementDistance" value="10">
+</div>
+
+<label><br>Distance d’évaluation (m)</label>
+<input id="distance" value="100">
+
+<label>
+    <br>Type de sol (g)
+    <span class="help">
+      ?
+      <span class="tooltip">
+        g = facteur de sol simplifié (ISO 9613) :<br>
+        0 → sol dur (béton, eau)<br>
+        2 → sol mixte<br>
+        4 → sol mou (herbe, neige)<br>
+        Plus le sol est mou, plus l'atténuation est importante.<br>
+        <span class="green">Pour un résultat conservateur, laisser la valeur à g = 0.</span>
+      </span>
+    </span>
+  </label>
+  
+  <select id="ground">
+  <option value="0">Dur (g=0)</option>
+  <option value="2">Mixte (g=2)</option>
+  <option value="4">Mou (g=4)</option>
+  </select>
+  
+
+  <label>
+    <br><br>
+    Directivité (Q)
+    <span class="help">?
+      <span class="tooltip">
+    
+        La directivité Q représente la répartition du son dans l’espace.<br><br>
+    
+        <table class="tooltip-table">
+          <tr>
+            <th>Configuration</th>
+            <th>Schéma</th>
+          </tr>
+          <tr>
+            <td>Sol (Q=2)</td>
+            <td><img src="Q2.png" width="60"></td>
+          </tr>
+          <tr>
+            <td>Mur (Q=4)</td>
+            <td><img src="Q4.png" width="60"></td>
+          </tr>
+          <tr>
+            <td>Coin (Q=8)</td>
+            <td><img src="Q8.png" width="60"></td>
+          </tr>
+        </table>
+    
+        <span class="tip">Plus Q est élevé, plus le son est dirigé.</span>
+    
+      </span>
+    </span>
+    </label>
+    
+    <select id="Q">
+    <option value="2" selected>Sol (Q=2)</option>
+    <option value="4">Mur (Q=4)</option>
+    <option value="8">Coin (Q=8)</option>
+    </select>
+    
+
+<button onclick="calculate()">Calculer</button>
+
+<div id="error" class="error"></div>
+<div id="result"></div>
+
+<canvas id="chart"></canvas>
+
+</div>
+
+<script>
+
+// constantes
+const A_weights = [-39.4,-26.2,-16.1,-8.6,-3.2,0,1.2,1,-1.1];
+const alpha = [0.05,0.1,0.2,0.5,1,2,5,10,20];
+
+function loadDemo(){
+
+let type = document.getElementById("inputType").value;
+
+// paramètres communs
+document.getElementById("distance").value = 100;
+document.getElementById("ground").value = 0;
+document.getElementById("Q").value = 4;
+
+// ===== CAS 1 : Lw linéaire =====
+if(type === "lw_lin"){
+  document.getElementById("value").value = 105;
+}
+
+// ===== CAS 2 : LwA =====
+if(type === "lwA"){
+  document.getElementById("value").value = 95;
+}
+
+// ===== CAS 3 : Lp =====
+if(type === "lp"){
+  document.getElementById("value").value = 70;
+  document.getElementById("measurementDistance").value = 10;
+}
+
+// ===== CAS 4 : Lw par bandes =====
+if(type === "lw_oct"){
+
+  let demo = [85,90,95,100,102,100,95,90,85];
+
+  document.querySelectorAll(".oct").forEach((el,i)=>{
+    el.value = demo[i];
+  });
+}
+
+// ===== CAS 5 : Lp par bandes =====
+if(type === "lp_oct"){
+
+  let demo = [65,70,75,80,82,80,75,70,65];
+
+  document.querySelectorAll(".oct").forEach((el,i)=>{
+    el.value = demo[i];
+  });
+
+  document.getElementById("measurementDistance").value = 10;
+}
+
+}
+
+function sumLevels(levels){
+ let s=0;
+ levels.forEach(l=>{
+  if(!isNaN(l)) s+=Math.pow(10,l/10);
+ });
+ return 10*Math.log10(s);
+}
+
+function Adiv(r){ return 20*Math.log10(r)+11;}
+function Aatm(a,r){ return a*r/1000;}
+function directivity(Q){ return 10*Math.log10(Q);}
+function lpToLw(Lp,r){ return Lp + 20*Math.log10(r)+8;}
+
+function calcISO(Lw_oct,r,Q,g){
+ let LA=Lw_oct.map((Lw,i)=>{
+  if(isNaN(Lw)) return NaN;
+  let Lp=Lw + directivity(Q)-Adiv(r)-Aatm(alpha[i],r)-g;
+  return Lp + A_weights[i];
+ });
+ return sumLevels(LA);
+}
+
+function findDistance(Lw_oct,target,Q,g){
+ let r=1;
+ while(r<5000){
+  if(calcISO(Lw_oct,r,Q,g)<=target) return r;
+  r++;
+ }
+ return ">5000";
+}
+
+// GRAPH
+let chart;
+function plotGraph(Lw_oct,Q,g,target){
+
+ let d=[],L=[];
+ for(let r=10;r<=1000;r+=10){
+  d.push(r);
+  L.push(calcISO(Lw_oct,r,Q,g));
+ }
+
+ if(chart) chart.destroy();
+
+ chart=new Chart(document.getElementById("chart"),{
+  type:'line',
+  data:{
+   labels:d,
+   datasets:[
+    {label:"LAeq",data:L},
+    {label:"Seuil",data:d.map(()=>target),borderDash:[5,5]}
+   ]
+  }
+ });
+}
+
+// UI
+inputType.addEventListener("change",()=>{
+ let t=inputType.value;
+
+ octaveBlock.style.display=t.includes("oct")?"block":"none";
+ singleInput.style.display=t.includes("oct")?"none":"block";
+ measurementBlock.style.display=t.includes("lp")?"block":"none";
+});
+
+// CALCUL
+function calculate(){
+
+ error.innerText="";
+ result.innerHTML="";
+
+ let type=inputType.value;
+ let r=parseFloat(distance.value);
+ let Q=parseFloat(document.getElementById("Q").value);
+ let g=parseFloat(document.getElementById("ground").value);
+
+ let Lw_oct=[];
+ let Lw_global;
+
+ // === GLOBAL ===
+ if(type==="lw_lin" || type==="lwA" || type==="lp"){
+
+  let v=parseFloat(value.value);
+  if(isNaN(v)){ error.innerText="Valeur invalide"; return;}
+
+  if(type==="lw_lin"){
+  Lw_global = v;
+}
+else if(type==="lwA"){
+  Lw_global = v;  // déjà pondéré A ✅
+}
+else if(type==="lp"){
+  let r_meas=parseFloat(measurementDistance.value);
+  if(isNaN(r_meas)){ error.innerText="Distance mesure invalide"; return;}
+  Lw_global=lpToLw(v,r_meas);
+}
+
+if(type==="lwA"){
+  // spectre déjà pondéré → on retire les pondérations pour éviter double comptage
+  let Lw_eq = Lw_global - 10;
+
+  Lw_oct = A_weights.map(w => Lw_eq - w);
+}
+else{
+  let Lw_eq = Lw_global - 10;
+  Lw_oct = Array(9).fill(Lw_eq);
+}
+ }
+
+ // === BANDES ===
+ if(type==="lw_oct" || type==="lp_oct"){
+
+  document.querySelectorAll(".oct").forEach((el,i)=>{
+    let v=parseFloat(el.value);
+
+    if(i===0 && (el.value==="" || isNaN(v))){
+      Lw_oct.push(NaN);
+    } else {
+      if(isNaN(v)){ error.innerText="Compléter les bandes"; return; }
+
+      if(type==="lp_oct"){
+        let r_meas=parseFloat(measurementDistance.value);
+        v=lpToLw(v,r_meas);
+      }
+
+      Lw_oct.push(v);
+    }
+  });
+
+  Lw_global = sumLevels(Lw_oct); // ✅ calcul clé
+}
+
+let LA=calcISO(Lw_oct,r,Q,g);
+
+let targets=[40,45,50,55,70];
+
+let table="<table><tr><th>Seuil (dB(A))</th><th>Distance (m)</th><th>Graph</th></tr>";
+
+targets.forEach((t,i)=>{
+ let d=findDistance(Lw_oct,t,Q,g);
+
+ table+=`
+ <tr>
+  <td>${t}</td>
+  <td>${d}</td>
+  <td><input type="radio" name="rad" value="${t}" ${i==1?"checked":""}></td>
+ </tr>`;
+});
+
+table+="</table>";
+
+result.innerHTML = `
+<b>Lw global :</b> ${Lw_global.toFixed(1)} dB<br>
+<b>LAeq à ${r} m :</b> ${LA.toFixed(1)} dB(A)<br>
+${table}
+`;
+
+plotGraph(Lw_oct,Q,g,45);
+
+document.querySelectorAll("input[name='rad']").forEach(radio=>{
+ radio.addEventListener("change",()=>{
+  plotGraph(Lw_oct,Q,g,parseFloat(radio.value));
+ });
+});
+
+}
+
+</script>
+<!-- Cloudflare Web Analytics -->
+  <script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "4cfe58e538214e69bbb021a15713786d"}'>
+    
+  </script>
+  <!-- End Cloudflare Web Analytics -->
+  
+</body>
+</html>
