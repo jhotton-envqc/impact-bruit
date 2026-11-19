@@ -121,9 +121,92 @@ td, th { border:1px solid #ccc; padding:6px;}
   font-weight: bold;
 }
 
+.contact-info {
+    margin-top: 10px;
+    padding-left: 10px;
+    font-size: 0.9rem;
+    color: #666;
+}
 
+.contact-info a {
+    color: #0066cc;
+    text-decoration: none;
+}
 
+.contact-info a:hover {
+    text-decoration: underline;
+}
 
+.subtitle{
+  margin-top:-15px;
+  margin-bottom:15px;
+  color:#6c757d;
+  font-size:0.95rem;
+}
+
+.top-links{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  flex-wrap:wrap;
+  gap:12px;
+
+  margin:15px 0 20px 0;
+  padding:12px 16px;
+
+  background:#eef5fc;
+  border-left:4px solid #3498db;
+  border-radius:8px;
+}
+
+.doc-link{
+  color:#2e86de;
+  font-weight:bold;
+  text-decoration:none;
+  font-size:0.95rem;
+}
+
+.doc-link:hover{
+  text-decoration:underline;
+}
+
+.contact-link{
+  font-size:0.95rem;
+  color:#555;
+}
+
+.contact-link a{
+  color:#0066cc;
+  text-decoration:none;
+  font-weight:bold;
+}
+
+.contact-link a:hover{
+  text-decoration:underline;
+}
+
+.quick-actions{
+  display:flex;
+  gap:10px;
+  margin:15px 0 20px 0;
+}
+
+.action-btn{
+  background:#3498db;
+  color:white;
+  padding:10px 16px;
+  border-radius:6px;
+  text-decoration:none;
+  font-weight:bold;
+}
+
+.action-btn:hover{
+  background:#2980b9;
+}
+
+.action-btn.secondary{
+  background:#95a5a6;
+}
 
 </style>
 </head>
@@ -153,22 +236,24 @@ td, th { border:1px solid #ccc; padding:6px;}
       </span>
     </span>
   </h2>
+  <p class="subtitle">
+    Outil simplifié d'évaluation de l'impact sonore basé sur la norme ISO 9613.
+  </p>
 
-  <div style="margin-top:-10px; margin-bottom:20px;">
-    <a
-      href="documentation.html"
+  <div class="quick-actions">
+
+    <a href="documentation.html"
       target="_blank"
-      style="
-        font-size:0.9em;
-        text-decoration:none;
-        color:#3498db;
-        font-weight:bold;
-      "
-    >
+      class="action-btn">
       📘 Consulter la documentation
     </a>
+
+    <a href="mailto:julien.hotton@environnement.gouv.qc.ca"
+      class="action-btn secondary">
+      💬 Questions, commentaires ou demande d'assistance
+    </a>
+
   </div>
-  
 
 <label>Type d'entrée</label>
 <div style="display:flex; gap:10px;">
